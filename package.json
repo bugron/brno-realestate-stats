@@ -1,0 +1,21 @@
+{
+  "name": "brno-realestate-stats",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "posthtml": "^0.15.1",
+    "posthtml-match-helper": "^1.0.1",
+    "puppeteer": "^7.1.0",
+    "typescript": "^4.1.5"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "tsc": "rm -rf dist && tsc",
+    "tscw": "tsc --watch"
+  },
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.1"
+  }
+}
