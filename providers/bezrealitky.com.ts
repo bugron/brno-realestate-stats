@@ -1,8 +1,7 @@
-const puppeteer = require('puppeteer');
-const logger = require('../logger');
+import logger from '../logger';
 
 const localLogger = logger('bezrealitky.com');
-const sleep = (timeout = 1000) => new Promise(r => setTimeout(() => r(), timeout));
+const sleep = (timeout = 1000) => new Promise<void>(r => setTimeout(() => r(), timeout));
 
 const mockData = [
   "CZK 11,000 + CZK 2,200",
@@ -210,9 +209,9 @@ const mockData = [
   "CZK 17,500 + CZK 1,600"
 ];
 
-module.exports = () => {
-  let fullPrices = [];
-  let utilityPrices = [];
+export default () => {
+  let fullPrices: number[] = [];
+  let utilityPrices: number[] = [];
 
   const rawPrices = mockData.map(t => t.trim().replace(/[\s\.,]+/g, '').replace(/czk/ig, ''));
 

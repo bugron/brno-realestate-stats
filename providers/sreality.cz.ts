@@ -1,5 +1,6 @@
-const axios = require('axios');
-const logger = require('../logger');
+import axios from 'axios';
+import logger from '../logger';
+import { Provider } from '../analysis';
 
 const localLogger = logger('sreality.cz');
 
@@ -17,7 +18,7 @@ const finish = () => {
   };
 }
 
-const getOffers = (pageNumber = 1) => {
+const getOffers = (pageNumber = 1): Promise<unknown> | Provider => {
   if (pageNumber > MAX_PAGE_NUMBER) {
     return finish();
   }

@@ -1,13 +1,15 @@
-const axios = require('axios');
-const posthtml = require('posthtml');
-const matchHelper = require("posthtml-match-helper");
-const querystring = require('querystring');
-const logger = require('../logger');
+import axios from 'axios';
+import posthtml from 'posthtml';
+// @ts-ignore
+import matchHelper from 'posthtml-match-helper';
+import querystring from 'querystring';
+import logger from '../logger';
+import { Provider } from '../analysis';
 
 const localLogger = logger('amigro.cz');
 
-const fullPrices = [];
-const utilityPrices = [];
+const fullPrices: number[] = [];
+const utilityPrices: number[] = [];
 const searchURL = 'http://www.amigro.cz/reality/';
 const MAX_PAGE_NUMBER = 1;
 
@@ -24,7 +26,7 @@ const initialRequestBody = {
   Submit:'Vyhledat:'
 };
 
-const finish = () => {
+const finish = (): Provider => {
   localLogger('Finished processing amigro.cz data... Exiting.');
   return {
     name: 'amigro.cz',
@@ -33,7 +35,7 @@ const finish = () => {
   };
 }
 
-const getOffers = (pageNumber = 1) => {
+const getOffers = (pageNumber = 1): Promise<unknown> | Provider => {
   if (pageNumber > MAX_PAGE_NUMBER) {
     return finish();
   }
@@ -48,13 +50,17 @@ const getOffers = (pageNumber = 1) => {
           // do something for tree
           tree.match(matchHelper('p.prehled-cena'), (node) => {
             fullPrices.push(
+              // @ts-ignore
               node.content
+                // @ts-ignore
                 .filter(c => c.tag === 'strong')
+                // @ts-ignore
                 .map(c => parseInt(c.content[0].replace(/\s/g, '').match(/\d+/)[0], 10))[0]
             );
             return node
           })
         })
+        // @ts-ignore
         .process(data, { sync: true }).html;
 
       return getOffers(pageNumber + 1);

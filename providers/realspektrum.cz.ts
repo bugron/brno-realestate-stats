@@ -1,12 +1,12 @@
-const puppeteer = require('puppeteer');
-const logger = require('../logger');
+import puppeteer, { Browser } from 'puppeteer';
+import logger from '../logger';
 
-const localLogger = logger('cityrealestate.cz');
-const sleep = (timeout = 1000) => new Promise(r => setTimeout(() => r(), timeout));
+const localLogger = logger('realspektrum.cz');
+const sleep = (timeout = 1000) => new Promise<void>(r => setTimeout(() => r(), timeout));
 
-module.exports = () => puppeteer.launch().then(async browser => {
+export default () => puppeteer.launch().then(async (browser: Browser) => {
   const page = await browser.newPage();
-  const DESCRIPTION_TEXT = '.post-excerpt p';
+  const PRICE_TEXT = '.cena';
   const NEXT_PAGE_SELECTOR = 'nav#pagination .pull-right a';
   const waitForSelectorOptions = { timeout: 20000 };
   const RETRY_COUNT = 5;
@@ -15,46 +15,43 @@ module.exports = () => puppeteer.launch().then(async browser => {
   let nextPageExists = false;
   let pageCounter = 1;
 
-  let nextPageURL = 'http://www.cityrealestate.cz/en/category/advertisements/';
-  let rawPrices = [];
-  let fullPrices = [];
-  let utilityPrices = [];
+  let nextPageURL = 'https://www.realspektrum.cz/bydleni/hledam-nemovitost?filterMaxPrice=20000&filterOptions%5B89%5D%5B2%5D=47&filterOptions%5B91%5D%5B1%5D=51&filterOptions%5B76%5D%5B1%5D=1&filterOptions%5B76%5D%5B2%5D=2&filterOptionsNonSelectable%5B93%5D%5B0%5D=Brno-m%C4%9Bsto';
+  let fullPrices: number[] = [];
+  let utilityPrices: number[] = [];
   
-  localLogger('Opening cityrealestate.cz...');
+  localLogger('Opening realspektrum.cz...');
 
   do {
     localLogger('Processing page ' + pageCounter + '...');
 
-    const recursiveWaitForSelector = async (tryNumber = 1) => {
+    const recursiveWaitForSelector = async (tryNumber = 1): Promise<unknown> => {
       if (tryNumber > RETRY_COUNT) throw new Error('Tried too many times...');
 
       try {
         await page.goto(nextPageURL);
-        await page.waitForSelector(DESCRIPTION_TEXT, waitForSelectorOptions);
+        await page.waitForSelector(PRICE_TEXT, waitForSelectorOptions);
       } catch {
         localLogger('Scheduling a retry. Sleeping for ' + RETRY_WAIT_TIME / 1000 + ' secs');
         await sleep(RETRY_WAIT_TIME);
         localLogger('Retrying...');
-        await page.reload(nextPageURL);
+        await page.reload();
         return recursiveWaitForSelector(tryNumber + 1);
       }
     }
 
     await recursiveWaitForSelector();
   
-    const rawPrices = await page.evaluate((wordSel) => {
+    const rawPrices = await page.evaluate((wordSel: string) => {
       return Array.from(document.querySelectorAll(wordSel))
-        .map(v => v.textContent.trim().replace(/[\.\s,]/g, ''));
-    }, DESCRIPTION_TEXT);
+        .map(v => v.textContent?.trim().replace(/[\.\s,]/g, ''));
+    }, PRICE_TEXT);
 
-    const cleanPrices = rawPrices.map(price => {
-      // price.match(/(\d{4,})CZK(.*\+.*(\d{3,})CZK)?/i))
-      if (price.indexOf('+') !== -1) {
-        const [price1, price2] = price.split('+');
-        utilityPrices = [...utilityPrices, Number(price2)];
-        return Number(price1) + Number(price2);
+    const cleanPrices = rawPrices.map((price?: string) => {
+      const parsedValues = price?.match(/\d+/)
+      if (parsedValues?.length) {
+        return Number(parsedValues[0]);
       } else {
-        return Number(price);
+        return 0;
       }
     });
 
@@ -68,8 +65,8 @@ module.exports = () => puppeteer.launch().then(async browser => {
     try {
       await page.waitForSelector(NEXT_PAGE_SELECTOR, { timeout: 5000 });
       nextPageExists = true;
-      nextPageURL = await page.evaluate((pageSel) => {
-        return document.querySelector(pageSel).href;
+      nextPageURL = await page.evaluate((pageSel: string) => {
+        return (document.querySelector(pageSel) as HTMLAnchorElement)?.href;
       }, NEXT_PAGE_SELECTOR);
 
       if (nextPageURL) {
@@ -89,11 +86,11 @@ module.exports = () => puppeteer.launch().then(async browser => {
     }
   } while (nextPageExists);
 
-  localLogger('Finished processing cityrealestate.cz data... Exiting.')
+  localLogger('Finished processing realspektrum.cz data... Exiting.')
   
   await browser.close();
   return {
-    name: 'cityrealestate.cz',
+    name: 'realspektrum.cz',
     fullPrices,
     utilityPrices 
   };

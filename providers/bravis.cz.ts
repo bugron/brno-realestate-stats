@@ -1,13 +1,18 @@
-const puppeteer = require('puppeteer');
-const logger = require('../logger');
+import puppeteer, { Browser } from 'puppeteer';
+import logger from '../logger';
 
-const localLogger = logger('foreigners.cz');
-const sleep = (timeout = 1000) => new Promise(r => setTimeout(() => r(), timeout));
+const localLogger = logger('bravis.cz');
+const sleep = (timeout = 1000) => new Promise<void>(r => setTimeout(() => r(), timeout));
 
-module.exports = () => puppeteer.launch().then(async browser => {
+// let nodes = Array.from(document.querySelectorAll('strong.price'))
+// trimmedValues = nodes.map(node => node.textContent.trim().replace(/[\s\.,]+/g, ''))
+// let splitedValues = trimmedValues.map(value => value.split('CZK/month'))
+// splitedValues.map(values => values[1].replace(/czk/i, '').match(/(CZK)?\d+/))
+
+export default () => puppeteer.launch().then(async (browser: Browser) => {
   const page = await browser.newPage();
-  const LISTING_ICONS_SELECTOR = 'span.estate-listing-icons > span:nth-child(3)';
-  const NEXT_PAGE_SELECTOR = 'ul.pager > li.next:not(.disabled) > a[title="Next"]';
+  const PRICE_TEXT_SELECTOR = 'strong.price';
+  const NEXT_PAGE_SELECTOR = 'li.pagination a.next';
   const waitForSelectorOptions = { timeout: 20000 };
   const RETRY_COUNT = 5;
   const RETRY_WAIT_TIME = 5000;
@@ -15,27 +20,27 @@ module.exports = () => puppeteer.launch().then(async browser => {
   let nextPageExists = false;
   let pageCounter = 1;
 
-  let nextPageURL = 'https://www.foreigners.cz/real-estate/apartment/rent/prague?location=m-0-582786-0&area=15&furnished%5B0%5D=1&furnished%5B1%5D=2&rooms%5B0%5D=1&rooms%5B1%5D=2&price_from=5000&price_to=20000';
+  let nextPageURL = 'https://www.bravis.cz/en/flats-for-rent?typ-nemovitosti-byt+1=&typ-nemovitosti-byt+2=&typ-nabidky=flats-for-rent&lokalita=cele-brno&vybavenost=nezalezi&q=&action=search&s=1-40-price-0';
   let rawPrices = [];
-  let fullPrices = [];
-  let utilityPrices = [];
+  let fullPrices: number[] = [];
+  let utilityPrices: number[] = [];
   
-  localLogger('Opening Foreigners.cz...');
+  localLogger('Opening Bravis.cz...');
 
   do {
     localLogger('Processing page ' + pageCounter + '...');
 
-    const recursiveWaitForSelector = async (tryNumber = 1) => {
+    const recursiveWaitForSelector = async (tryNumber = 1): Promise<unknown> => {
       if (tryNumber > RETRY_COUNT) throw new Error('Tried too many times...');
 
       try {
         await page.goto(nextPageURL);
-        await page.waitForSelector(LISTING_ICONS_SELECTOR, waitForSelectorOptions);
+        await page.waitForSelector(PRICE_TEXT_SELECTOR, waitForSelectorOptions);
       } catch {
         localLogger('Scheduling a retry. Sleeping for ' + RETRY_WAIT_TIME / 1000 + ' secs');
         await sleep(RETRY_WAIT_TIME);
         localLogger('Retrying...');
-        await page.reload(nextPageURL);
+        await page.reload();
         return recursiveWaitForSelector(tryNumber + 1);
       }
     }
@@ -44,19 +49,22 @@ module.exports = () => puppeteer.launch().then(async browser => {
   
     const rawPrices = await page.evaluate((wordSel) => {
       return Array.from(document.querySelectorAll(wordSel))
-        .map(node => node.childNodes[2].textContent
-          .trim().replace(/\s/g, '').replace(/czk/i, '')
-        );
-    }, LISTING_ICONS_SELECTOR);
+        .map(node => {
+          const values = node.textContent.trim()
+            .replace(/[\s\.,]+/g, '')
+            .split('CZK/month');
+          return[values[0], values[1].replace(/czk/i, '').match(/(CZK)?\d+/)]
+        });
+    }, PRICE_TEXT_SELECTOR);
 
     const cleanPrices = rawPrices.map(price => {
-      if (price.indexOf('+') !== -1) {
-        const [price1, price2] = price.split('+');
-        utilityPrices = [...utilityPrices, Number(price2)];
-        return Number(price1) + Number(price2);
-      } else {
-        return Number(price);
+      let rentPrice = Number(price[0]);
+      if (price[1]) {
+        rentPrice += Number(price[1][0]);
+        utilityPrices = [...utilityPrices, Number(price[1][0])];
       }
+
+      return rentPrice;
     });
 
     localLogger(cleanPrices.length + ' prices extracted from the page');
@@ -90,11 +98,11 @@ module.exports = () => puppeteer.launch().then(async browser => {
     }
   } while (nextPageExists);
 
-  localLogger('Finished processing Foreigners.cz data... Exiting.')
+  localLogger('Finished processing Bravis.cz data... Exiting.')
   
   await browser.close();
   return {
-    name: 'foreigners.cz',
+    name: 'bravis.cz',
     fullPrices,
     utilityPrices 
   };

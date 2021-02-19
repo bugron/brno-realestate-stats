@@ -1,18 +1,13 @@
-const puppeteer = require('puppeteer');
-const logger = require('../logger');
+import puppeteer, { Browser } from 'puppeteer';
+import logger from '../logger';
 
-const localLogger = logger('bravis.cz');
-const sleep = (timeout = 1000) => new Promise(r => setTimeout(() => r(), timeout));
+const localLogger = logger('cityrealestate.cz');
+const sleep = (timeout = 1000) => new Promise<void>(r => setTimeout(() => r(), timeout));
 
-// let nodes = Array.from(document.querySelectorAll('strong.price'))
-// trimmedValues = nodes.map(node => node.textContent.trim().replace(/[\s\.,]+/g, ''))
-// let splitedValues = trimmedValues.map(value => value.split('CZK/month'))
-// splitedValues.map(values => values[1].replace(/czk/i, '').match(/(CZK)?\d+/))
-
-module.exports = () => puppeteer.launch().then(async browser => {
+export default () => puppeteer.launch().then(async (browser: Browser) => {
   const page = await browser.newPage();
-  const PRICE_TEXT_SELECTOR = 'strong.price';
-  const NEXT_PAGE_SELECTOR = 'li.pagination a.next';
+  const DESCRIPTION_TEXT = '.post-excerpt p';
+  const NEXT_PAGE_SELECTOR = 'nav#pagination .pull-right a';
   const waitForSelectorOptions = { timeout: 20000 };
   const RETRY_COUNT = 5;
   const RETRY_WAIT_TIME = 5000;
@@ -20,27 +15,26 @@ module.exports = () => puppeteer.launch().then(async browser => {
   let nextPageExists = false;
   let pageCounter = 1;
 
-  let nextPageURL = 'https://www.bravis.cz/en/flats-for-rent?typ-nemovitosti-byt+1=&typ-nemovitosti-byt+2=&typ-nabidky=flats-for-rent&lokalita=cele-brno&vybavenost=nezalezi&q=&action=search&s=1-40-price-0';
-  let rawPrices = [];
-  let fullPrices = [];
-  let utilityPrices = [];
+  let nextPageURL = 'http://www.cityrealestate.cz/en/category/advertisements/';
+  let fullPrices: number[] = [];
+  let utilityPrices: number[] = [];
   
-  localLogger('Opening Bravis.cz...');
+  localLogger('Opening cityrealestate.cz...');
 
   do {
     localLogger('Processing page ' + pageCounter + '...');
 
-    const recursiveWaitForSelector = async (tryNumber = 1) => {
+    const recursiveWaitForSelector = async (tryNumber = 1): Promise<unknown> => {
       if (tryNumber > RETRY_COUNT) throw new Error('Tried too many times...');
 
       try {
         await page.goto(nextPageURL);
-        await page.waitForSelector(PRICE_TEXT_SELECTOR, waitForSelectorOptions);
+        await page.waitForSelector(DESCRIPTION_TEXT, waitForSelectorOptions);
       } catch {
         localLogger('Scheduling a retry. Sleeping for ' + RETRY_WAIT_TIME / 1000 + ' secs');
         await sleep(RETRY_WAIT_TIME);
         localLogger('Retrying...');
-        await page.reload(nextPageURL);
+        await page.reload();
         return recursiveWaitForSelector(tryNumber + 1);
       }
     }
@@ -49,22 +43,18 @@ module.exports = () => puppeteer.launch().then(async browser => {
   
     const rawPrices = await page.evaluate((wordSel) => {
       return Array.from(document.querySelectorAll(wordSel))
-        .map(node => {
-          const values = node.textContent.trim()
-            .replace(/[\s\.,]+/g, '')
-            .split('CZK/month');
-          return[values[0], values[1].replace(/czk/i, '').match(/(CZK)?\d+/)]
-        });
-    }, PRICE_TEXT_SELECTOR);
+        .map(v => v.textContent.trim().replace(/[\.\s,]/g, ''));
+    }, DESCRIPTION_TEXT);
 
     const cleanPrices = rawPrices.map(price => {
-      let rentPrice = Number(price[0]);
-      if (price[1]) {
-        rentPrice += Number(price[1][0]);
-        utilityPrices = [...utilityPrices, Number(price[1][0])];
+      // price.match(/(\d{4,})CZK(.*\+.*(\d{3,})CZK)?/i))
+      if (price.indexOf('+') !== -1) {
+        const [price1, price2] = price.split('+');
+        utilityPrices = [...utilityPrices, Number(price2)];
+        return Number(price1) + Number(price2);
+      } else {
+        return Number(price);
       }
-
-      return rentPrice;
     });
 
     localLogger(cleanPrices.length + ' prices extracted from the page');
@@ -98,11 +88,11 @@ module.exports = () => puppeteer.launch().then(async browser => {
     }
   } while (nextPageExists);
 
-  localLogger('Finished processing Bravis.cz data... Exiting.')
+  localLogger('Finished processing cityrealestate.cz data... Exiting.')
   
   await browser.close();
   return {
-    name: 'bravis.cz',
+    name: 'cityrealestate.cz',
     fullPrices,
     utilityPrices 
   };
