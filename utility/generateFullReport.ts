@@ -1,6 +1,6 @@
 import { ProviderReport } from '../provider-analyzer';
 
-module.exports = (allReportData: ProviderReport[]) => {
+export default (allReportData: ProviderReport[]) => {
   let fullReport = allReportData.reduce((acc, nextReport) => {
     return Object.assign({}, acc, {
       allPricesCount: acc.allPricesCount + Number(nextReport.allPricesCount),

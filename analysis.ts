@@ -1,8 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const generateFullReport = require('./utility/generateFullReport');
-const getProviderConifg = require('./utility/getProviderConfig');
-const analyzerFactory = require('./provider-analyzer');
+import fs from 'fs';
+import path from 'path';
+import generateFullReport from './utility/generateFullReport';
+import getProviderConfig from './utility/getProviderConfig';
+import analyzerFactory from './provider-analyzer';
 
 export type Provider = {
   name: string,
@@ -13,21 +13,27 @@ export type Provider = {
 export default (data: Provider[]) => {
   let allReportData: Provider[] = [];
 
+  // create the reports directory
+  if (!fs.existsSync(path.resolve('reports'))) {
+    fs.mkdirSync(path.resolve('reports'));
+  }
+
   data.forEach(provider => {
-    // create analysis function with provider specifig configuration
-    const runProviderAnalysis = analyzerFactory(getProviderConifg(provider.name));
+    // create analysis function with provider specific configuration
+    const runProviderAnalysis = analyzerFactory(getProviderConfig(provider.name));
     console.log(provider.name + ' data fetched');
 
     // run analysis
     const providerReport = runProviderAnalysis(provider);
     // and collect its results
+    //@ts-ignore
     allReportData = [...allReportData, providerReport];
   });
 
   // generate a full report
   const fullReport = generateFullReport(allReportData);
 
-  fs.writeFile(path.join(__dirname, 'reports', `full-report.txt`), JSON.stringify(fullReport, null, 2), (err: Error) => {
+  fs.writeFile(path.join(__dirname, '../reports', `full-report.txt`), JSON.stringify(fullReport, null, 2), (err: any) => {
     if (err) throw err;
     console.log(`Successfully Written to full-report.txt`);
   })

@@ -11,7 +11,7 @@ const providerConfigs = {
   }
 }
 
-const getProviderConifg = (providerName = '') => {
+const getProviderConfig = (providerName = '') => {
   // @ts-ignore
   if (providerConfigs[providerName]) {
     // @ts-ignore
@@ -20,4 +20,4 @@ const getProviderConifg = (providerName = '') => {
   return providerConfigs.default;
 };
 
-module.exports = getProviderConifg;
+export default getProviderConfig;

@@ -22,7 +22,7 @@ const factory = ({
     reportAverage: false,
     reportMinMax: false,
     saveReport: false,
-    cleanReport: false,
+    cleanReport: true,
   },
 }) => (provider: Provider) => {
   if (!provider || !Object.keys(provider)) {
@@ -69,7 +69,7 @@ const factory = ({
 
   if (config.saveReport) {
     const writeOrAppend = config.cleanReport ? fs.writeFile : fs.appendFile;
-    writeOrAppend(path.join(__dirname, 'reports', `${provider.name}.txt`), report.join('\n'), (err: any) => {
+    writeOrAppend(path.join(__dirname, '../reports', `${provider.name}.txt`), report.join('\n'), (err: any) => {
       if (err) throw err;
       console.log(`Successfully Written to ${provider.name}.txt`);
     });

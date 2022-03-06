@@ -3,8 +3,8 @@ import bravis from './bravis.cz';
 import ulovdomov from './ulovdomov.cz';
 import sreality from './sreality.cz';
 import bezrealitky from './bezrealitky.com';
-import realspektrum from './realspektrum.cz.js';
-import amigro from './amigro.cz.js';
+import realspektrum from './realspektrum.cz';
+import amigro from './amigro.cz';
 
 export default [
   foreigners,
