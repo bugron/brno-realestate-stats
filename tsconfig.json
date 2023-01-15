@@ -3,7 +3,6 @@
   "include": ["**/*"],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"],
   "compilerOptions": {
-    "allowJs": true,
     "outDir": "dist",
   },
 }

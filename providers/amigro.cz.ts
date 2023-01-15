@@ -1,6 +1,5 @@
 import axios from 'axios';
 import posthtml from 'posthtml';
-// @ts-ignore
 import matchHelper from 'posthtml-match-helper';
 import querystring from 'querystring';
 import logger from '../logger';

@@ -43,14 +43,13 @@ export default () => puppeteer.launch().then(async (browser: Browser) => {
 
     const rawPrices = await page.evaluate((wordSel: string) => {
       return Array.from(document.querySelectorAll(wordSel))
-        // @ts-ignore
-        .map(node => node?.childNodes[2].textContent
-          .trim().replace(/\s/g, '').replace(/czk/i, '')
+        .map(node => node?.childNodes?.[2]?.textContent
+          ?.trim().replace(/\s/g, '').replace(/czk/i, '')
         );
     }, LISTING_ICONS_SELECTOR);
 
     const cleanPrices = rawPrices.map(price => {
-      if (price.indexOf('+') !== -1) {
+      if (price && price.indexOf('+') !== -1) {
         const [price1, price2] = price.split('+');
         utilityPrices = [...utilityPrices, Number(price2)];
         return Number(price1) + Number(price2);

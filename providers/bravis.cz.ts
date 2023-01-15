@@ -50,7 +50,7 @@ export default () => puppeteer.launch().then(async (browser: Browser) => {
     const rawPrices = await page.evaluate((wordSel) => {
       return Array.from(document.querySelectorAll(wordSel))
         .map(node => {
-          const values = node.textContent.trim()
+          const values = node.textContent!.trim()
             .replace(/[\s\.,]+/g, '')
             .split('CZK/month');
           return[values[0], values[1].replace(/czk/i, '').match(/(CZK)?\d+/)]
@@ -78,7 +78,7 @@ export default () => puppeteer.launch().then(async (browser: Browser) => {
       await page.waitForSelector(NEXT_PAGE_SELECTOR, { timeout: 5000 });
       nextPageExists = true;
       nextPageURL = await page.evaluate((pageSel) => {
-        return document.querySelector(pageSel).href;
+        return document.querySelector<HTMLAnchorElement>(pageSel)?.href ?? '';
       }, NEXT_PAGE_SELECTOR);
 
       if (nextPageURL) {

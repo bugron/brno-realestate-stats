@@ -43,12 +43,12 @@ export default () => puppeteer.launch().then(async (browser: Browser) => {
   
     const rawPrices = await page.evaluate((wordSel) => {
       return Array.from(document.querySelectorAll(wordSel))
-        .map(v => v.textContent.trim().replace(/[\.\s,]/g, ''));
+        .map(v => v.textContent?.trim().replace(/[\.\s,]/g, ''));
     }, DESCRIPTION_TEXT);
 
     const cleanPrices = rawPrices.map(price => {
       // price.match(/(\d{4,})CZK(.*\+.*(\d{3,})CZK)?/i))
-      if (price.indexOf('+') !== -1) {
+      if (price && price.indexOf('+') !== -1) {
         const [price1, price2] = price.split('+');
         utilityPrices = [...utilityPrices, Number(price2)];
         return Number(price1) + Number(price2);
@@ -68,7 +68,7 @@ export default () => puppeteer.launch().then(async (browser: Browser) => {
       await page.waitForSelector(NEXT_PAGE_SELECTOR, { timeout: 5000 });
       nextPageExists = true;
       nextPageURL = await page.evaluate((pageSel) => {
-        return document.querySelector(pageSel).href;
+        return document.querySelector<HTMLAnchorElement>(pageSel)?.href ?? '';
       }, NEXT_PAGE_SELECTOR);
 
       if (nextPageURL) {
